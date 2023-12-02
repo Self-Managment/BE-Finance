@@ -1,0 +1,5 @@
+/backend/test.db
+/backend/.pytest_cache
+/backend/venv
+*.idea
+*.pyc
