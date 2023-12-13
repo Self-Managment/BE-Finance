@@ -31,15 +31,15 @@ class CreateTaskTypeSchema(BaseModel):
 class TaskSchema(_BaseModel):
     id: int
     desk_id: int
-    type_id: typing.Union[None, int]
+    type_id: typing.Optional[int]
     title: str
-    description: typing.Union[None, str]
-    date_to: datetime
+    description: typing.Optional[str]
+    date_to: typing.Optional[datetime]
 
 
 class CreateTaskSchema(BaseModel):
     desk_id: int
     title: str
-    date_to: datetime
-    type_id: typing.Union[None, int]
-    description: typing.Union[None, str]
+    date_to: typing.Optional[datetime]
+    type_id: typing.Optional[int]
+    description: typing.Optional[str]

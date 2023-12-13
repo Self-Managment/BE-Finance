@@ -2,7 +2,7 @@ from app.api.urls import DeskURLS
 from app.core.security import get_current_user
 from app.db.session import get_db
 from app.models.user import User
-from fastapi import Depends, APIRouter, status
+from fastapi import Depends, APIRouter, status, HTTPException
 from sqlalchemy.orm import Session
 
 from app.models.desk import Desk, TaskType
@@ -11,11 +11,16 @@ from app.schemas.desk import (
     CreateDeskSchema,
     CreateTaskTypeSchema,
     CreateTaskSchema,
+    DeskSchema,
+    TaskTypeSchema,
+    TaskSchema,
 )
 from app.models.desk import (
     create_desk_model,
     get_desk_models_list_by_user_id,
     get_desk_schema,
+    check_belong_desk_to_user,
+
     create_task_type_model,
     get_task_type_models_list_by_user_id,
     get_task_type_schema,
@@ -38,13 +43,17 @@ router = APIRouter()
 
 
 @router.post(DeskURLS.create_desk, status_code=status.HTTP_201_CREATED)
-def create_desk(desk: CreateDeskSchema, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def create_desk(
+        desk: CreateDeskSchema, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
+) -> DeskSchema:
     db_desk: Desk = create_desk_model(user_id=current_user.id, title=desk.title, db=db)
     return get_desk_schema(db_desk)
 
 
 @router.get(DeskURLS.get_desk_list, status_code=status.HTTP_200_OK)
-def get_desk_list(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def get_desk_list(
+        current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
+) -> typing.List[DeskSchema]:
     desk_models_list = get_desk_models_list_by_user_id(user_id=current_user.id, db=db)
     return desk_models_list
 
@@ -61,7 +70,7 @@ def create_type(
         task_type: CreateTaskTypeSchema,
         current_user: User = Depends(get_current_user),
         db: Session = Depends(get_db)
-):
+) -> TaskTypeSchema:
     db_task_type: TaskType = create_task_type_model(
         user_id=current_user.id, title=task_type.title, color=task_type.color, is_show=True, db=db
     )
@@ -72,7 +81,7 @@ def create_type(
 def get_task_type_list(
         is_show: typing.Union[None, bool] = None,
         current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
-):
+) -> typing.List[TaskTypeSchema]:
     task_type_models_list = get_task_type_models_list_by_user_id(user_id=current_user.id, is_show=is_show, db=db)
     return task_type_models_list
 
@@ -88,7 +97,10 @@ def get_task_type_list(
 def create_task(
         task: CreateTaskSchema,
         current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
-):
+) -> TaskSchema:
+    if not check_belong_desk_to_user(task.desk_id, current_user.id, db):
+        raise HTTPException(status_code=403, detail="Доска принадлежит другому пользователю")
+
     db_task = create_task_model(
         desk_id=task.desk_id,
         type_id=task.type_id,
@@ -101,6 +113,8 @@ def create_task(
 
 
 @router.get(DeskURLS.get_task_list, status_code=status.HTTP_200_OK)
-def get_task_list(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def get_task_list(
+        current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
+) -> typing.List[TaskSchema]:
     task_models_list = get_task_models_list_by_user_id(user_id=current_user.id, db=db)
     return task_models_list

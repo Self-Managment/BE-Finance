@@ -2,7 +2,9 @@ from app.api.urls import UserURLS
 from app.core.security import get_current_user
 from app.core.security import pwd_context, create_access_token
 from app.db.session import get_db
-from app.models.user import User, create_user_model, get_user_model, get_user_schema
+from app.models.user import (
+    User, create_user_model, get_user_model_by_username, get_user_model_by_email, get_user_schema
+)
 from app.schemas.user import UserCreateSchema, UserLoginSchema, UserSchema, TokenSchema
 from fastapi import Depends, HTTPException, APIRouter, status
 from sqlalchemy.orm import Session
@@ -11,7 +13,7 @@ router = APIRouter()
 
 
 @router.post(UserURLS.register, status_code=status.HTTP_201_CREATED)
-def user_register(user: UserCreateSchema, db: Session = Depends(get_db)):
+def user_register(user: UserCreateSchema, db: Session = Depends(get_db)) -> TokenSchema:
     """
     Эндпоинт регистрации юзера
     """
@@ -19,9 +21,13 @@ def user_register(user: UserCreateSchema, db: Session = Depends(get_db)):
     email = user.email
     password = user.password
 
-    db_user = get_user_model(username, db)
+    db_user = get_user_model_by_username(username, db)
     if db_user:
         raise HTTPException(status_code=403, detail=f"Пользователь {username} уже существует")
+
+    db_user = get_user_model_by_email(email, db)
+    if db_user:
+        raise HTTPException(status_code=403, detail=f"Эта почта уже используется")
 
     hashed_password = pwd_context.hash(password)
     user = create_user_model(username=username, email=email, password=hashed_password, db=db)
@@ -38,11 +44,11 @@ def user_register(user: UserCreateSchema, db: Session = Depends(get_db)):
 
 
 @router.post(UserURLS.login, status_code=status.HTTP_200_OK)
-def user_login(user: UserLoginSchema, db: Session = Depends(get_db)):
+def user_login(user: UserLoginSchema, db: Session = Depends(get_db)) -> TokenSchema:
     """
     Логин
     """
-    db_user = get_user_model(user.username, db)
+    db_user = get_user_model_by_username(user.username, db)
     if db_user and pwd_context.verify(user.password, db_user.password):
         access_token = create_access_token(data={"sub": db_user.username})
 
@@ -57,5 +63,5 @@ def user_login(user: UserLoginSchema, db: Session = Depends(get_db)):
 
 
 @router.get(UserURLS.user_data, status_code=status.HTTP_200_OK)
-def get_private_data(current_user: User = Depends(get_current_user)):
+def get_private_data(current_user: User = Depends(get_current_user)) -> UserSchema:
     return get_user_schema(current_user)

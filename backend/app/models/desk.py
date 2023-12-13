@@ -76,6 +76,13 @@ def get_desk_model_by_id(desk_id: int, db: Session = Depends(get_db)) -> Desk:
     return db_desk
 
 
+def check_belong_desk_to_user(desk_id: int, user_id: int, db: Session = Depends(get_db)) -> bool:
+    db_desk = get_desk_model_by_id(desk_id, db)
+
+    if db_desk and db_desk.user.id == user_id:
+        return True
+    return False
+
 def get_desk_schema(desk: Desk) -> DeskSchema:
     return Schema(DeskSchema, desk)
 

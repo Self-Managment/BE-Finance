@@ -29,8 +29,13 @@ def create_user_model(username: str, email: str, password: str, db: Session = De
     return db_user
 
 
-def get_user_model(username: str, db: Session = Depends(get_db)) -> User:
+def get_user_model_by_username(username: str, db: Session = Depends(get_db)) -> User:
     db_user = db.query(User).filter(User.username == username).first()
+    return db_user
+
+
+def get_user_model_by_email(email: str, db: Session = Depends(get_db)) -> User:
+    db_user = db.query(User).filter(User.email == email).first()
     return db_user
 
 
