@@ -19,6 +19,8 @@ from app.models.desk import (
     create_desk_model,
     get_desk_models_list_by_user_id,
     get_desk_schema,
+    edit_desk_model,
+    delete_desk_model_by_id,
     check_belong_desk_to_user,
 
     create_task_type_model,
@@ -56,6 +58,27 @@ def get_desk_list(
 ) -> typing.List[DeskSchema]:
     desk_models_list = get_desk_models_list_by_user_id(user_id=current_user.id, db=db)
     return desk_models_list
+
+
+@router.patch(DeskURLS.edit_desk, status_code=status.HTTP_200_OK)
+def edit_desk(
+        desk_id: int, desk: CreateDeskSchema, current_user: User = Depends(get_current_user),
+        db: Session = Depends(get_db),
+):
+    if not check_belong_desk_to_user(desk_id, current_user.id, db):
+        raise HTTPException(status_code=403, detail="Доска принадлежит другому пользователю")
+    edit_desk_model(desk_id, desk, db)
+    return {}
+
+
+@router.delete(DeskURLS.delete_desk, status_code=status.HTTP_200_OK)
+def delete_desk(
+        desk_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
+):
+    if not check_belong_desk_to_user(desk_id, current_user.id, db):
+        raise HTTPException(status_code=403, detail="Доска принадлежит другому пользователю")
+    delete_desk_model_by_id(desk_id, db)
+    return {}
 
 
 """

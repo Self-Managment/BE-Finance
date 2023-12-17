@@ -4,7 +4,7 @@ from datetime import datetime
 from app.db.base import Base
 from app.db.session import get_db
 from app.schemas.base import Schema
-from app.schemas.desk import DeskSchema, TaskTypeSchema, TaskSchema
+from app.schemas.desk import DeskSchema, CreateDeskSchema, TaskTypeSchema, TaskSchema
 from fastapi import Depends
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean
 from sqlalchemy.orm import Session, relationship, joinedload
@@ -14,7 +14,7 @@ class Desk(Base):
     __tablename__ = "desk"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("user.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("user.id", ondelete="CASCADE"), nullable=False)
     title = Column(String, index=True, nullable=False)
 
     user = relationship("User", back_populates="desks")
@@ -25,7 +25,7 @@ class TaskType(Base):
     __tablename__ = "task_type"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("user.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("user.id", ondelete="CASCADE"), nullable=False)
     title = Column(String, index=True, nullable=False)
     color = Column(String, nullable=False)
     is_show = Column(Boolean, default=True)
@@ -37,8 +37,8 @@ class Task(Base):
     __tablename__ = "task"
 
     id = Column(Integer, primary_key=True, index=True)
-    desk_id = Column(Integer, ForeignKey("desk.id"), nullable=False)
-    type_id = Column(Integer, ForeignKey("task_type.id"), nullable=True)
+    desk_id = Column(Integer, ForeignKey("desk.id", ondelete="CASCADE"), nullable=False)
+    type_id = Column(Integer, ForeignKey("task_type.id", ondelete="CASCADE"), nullable=True)
     title = Column(String, index=True, nullable=False)
     description = Column(String, nullable=True)
     date_to = Column(DateTime, default=datetime.utcnow)
@@ -64,7 +64,7 @@ def create_desk_model(user_id: int, title: str, db: Session = Depends(get_db)) -
 
 
 def get_desk_models_list_by_user_id(user_id: int, db: Session = Depends(get_db)) -> typing.List[DeskSchema]:
-    db_desk_list = db.query(Desk).filter(Desk.user_id == user_id)
+    db_desk_list = db.query(Desk).filter(Desk.user_id == user_id).order_by(Desk.created_at)
     result_list = [
         get_desk_schema(desk) for desk in db_desk_list
     ]
@@ -76,12 +76,27 @@ def get_desk_model_by_id(desk_id: int, db: Session = Depends(get_db)) -> Desk:
     return db_desk
 
 
+def edit_desk_model(desk_id: int, data: CreateDeskSchema, db: Session = Depends(get_db)) -> None:
+    db_desk = db.query(Desk).filter(Desk.id == desk_id).first()
+    db_desk.title = data.title
+    db.commit()
+    return
+
+
+def delete_desk_model_by_id(desk_id: int, db: Session = Depends(get_db)) -> None:
+    db.query(Task).filter(Task.desk_id == desk_id).delete()
+    db.query(Desk).filter(Desk.id == desk_id).delete()
+    db.commit()
+    return
+
+
 def check_belong_desk_to_user(desk_id: int, user_id: int, db: Session = Depends(get_db)) -> bool:
     db_desk = get_desk_model_by_id(desk_id, db)
 
     if db_desk and db_desk.user.id == user_id:
         return True
     return False
+
 
 def get_desk_schema(desk: Desk) -> DeskSchema:
     return Schema(DeskSchema, desk)

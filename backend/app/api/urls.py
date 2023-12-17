@@ -28,6 +28,12 @@ class DeskURLS:
     # GET
     get_desk_list = "/get_desk_list/"
     get_desk_list_url = f"{base_url}{get_desk_list}"
+    # PATCH
+    edit_desk = "/edit_desk/"
+    edit_desk_url = f"{base_url}{edit_desk}"
+    # DELETE
+    delete_desk = "/delete_desk/"
+    delete_desk_url = f"{base_url}{delete_desk}"
 
     # POST
     create_type = "/create_type/"
@@ -42,5 +48,3 @@ class DeskURLS:
     # GET
     get_task_list = "/get_task_list/"
     get_task_list_url = f"{base_url}{get_task_list}"
-
-

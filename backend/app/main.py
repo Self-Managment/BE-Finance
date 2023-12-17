@@ -4,19 +4,30 @@ from app.api.routers import router as api_router
 from app.db.base import Base
 from app.db.session import engine
 
-# Создаем экземпляр FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
 app = FastAPI()
 
-# Подключаем роутер API
 app.include_router(api_router)
 
 
-# Создаем таблицы в базе данных при запуске приложения
+origins = [
+    "http://localhost",
+    "http://localhost:3000",
+]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
 def init():
     Base.metadata.create_all(bind=engine)
 
 
-# Инициализируем таблицы
 init()
 
 if __name__ == "__main__":
