@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+  django-backend:
+    build:
+      context: ./app
+      dockerfile: Dockerfile
+    command: gunicorn finance.wsgi:application --bind 0.0.0.0:8080
+    volumes:
+      - ./app/:/usr/src/app/
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - 8080:8080
+    networks:
+      - sm-backend
+    env_file:
+      - .env
+
+  redis-consumers:
+    build:
+      context: ./app
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    command: python -u redis_start_consumers.py
+    depends_on:
+      - django-backend
+    networks:
+      - sm-backend
+
+  finance-postgres:
+    image: postgres:latest
+    container_name: finance-postgres
+    env_file: .env
+    environment:
+      POSTGRES_DB: $DB_NAME
+      POSTGRES_USER: $DB_USER
+      POSTGRES_PASSWORD: $DB_PASSWORD
+    depends_on:
+      - django-backend
+    ports:
+      - "$DB_PORT:5432"
+    networks:
+      - sm-backend
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+
+volumes:
+  postgres_data:
+  logs:
+
+networks:
+  sm-backend:
+    external: true
